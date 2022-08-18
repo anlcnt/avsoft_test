@@ -7,18 +7,22 @@
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+from pathlib import Path
+import pika
 import time
 import json
-import os
 
 
 class Watcher:
-    def __init__(self, watching_dir):
+    def __init__(self,
+                 watching_dir,
+                 rabbitmq_host=pika.ConnectionParameters("localhost")):
         self.observer = Observer()
         self.watching_dir = watching_dir
+        self.rabbitmq_connection = pika.BlockingConnection(rabbitmq_host)
 
     def run(self):
-        event_handler = Handler()
+        event_handler = Handler(self.rabbitmq_connection)
         self.observer.schedule(
             event_handler, self.watching_dir, recursive=True)
         self.observer.start()
@@ -34,27 +38,27 @@ class Watcher:
 
 class Handler(FileSystemEventHandler):
 
-    # TODO: Передача данных через RabbitMQ
-    @staticmethod
-    def send_message(path, query_name="Parsing"):
-        message = dict(
-            src_path=path,
-            time=time.time())
-        if query_name == "Errors":
-            message["err"] = True
-        print(json.dumps(message))
+    def __init__(self, rabbitmq_connection):
+        self.channel = rabbitmq_connection.channel()
 
-    @staticmethod
-    def on_created(event):
+    def on_created(self, event):
         if event.is_directory:
             return None
 
-        file_extension = os.path.splitext(event.src_path)[-1]
+        queue = "Parsing"
+        filepath = Path(event.src_path)
 
-        if file_extension == ".txt":
-            Handler.send_message(event.src_path)
-        else:
-            Handler.send_message(event.src_path, "Errors")
+        if filepath.suffix != ".txt":
+            queue = "Errors"
+
+        message = dict(
+            src_path=str(filepath),
+            time=time.time())
+
+        self.channel.queue_declare(queue=queue)
+        self.channel.basic_publish(exchange='',
+                                   routing_key="sender",
+                                   body=json.dumps(message))
 
 
 if __name__ == '__main__':
