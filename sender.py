@@ -1,3 +1,10 @@
+'''
+Ожидает появление файлов в папке и обрабатывает их: при нахождении текстового
+файла - передает json сообщение посредством RabbitMQ в очередь: «Parsing», в
+сообщении указывает путь до найденного файла; для других типов файлов -
+передает аналогичное сообщение в очередь: «Errors».
+'''
+
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import time
@@ -27,6 +34,7 @@ class Watcher:
 
 class Handler(FileSystemEventHandler):
 
+    # TODO: Передача данных через RabbitMQ
     @staticmethod
     def send_message(path, query_name="Parsing"):
         message = dict(
