@@ -8,21 +8,22 @@
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from pathlib import Path
-import pika
+from rabbitmq import queues as q, Worker
 import time
 import json
 
 
-class Watcher:
+class Watcher(Worker):
     def __init__(self,
-                 watching_dir,
-                 rabbitmq_host=pika.ConnectionParameters("localhost")):
+                 watching_dir: str,
+                 amqp_con_parameters: dict):
+        super(Watcher, self).__init__(amqp_con_parameters)
         self.observer = Observer()
         self.watching_dir = watching_dir
-        self.rabbitmq_connection = pika.BlockingConnection(rabbitmq_host)
 
     def run(self):
-        event_handler = Handler(self.rabbitmq_connection)
+        super(Watcher, self).run()
+        event_handler = Handler(self.connection)
         self.observer.schedule(
             event_handler, self.watching_dir, recursive=True)
         self.observer.start()
@@ -37,19 +38,18 @@ class Watcher:
 
 
 class Handler(FileSystemEventHandler):
-
-    def __init__(self, rabbitmq_connection):
-        self.channel = rabbitmq_connection.channel()
+    def __init__(self, amqp_connection):
+        self.channel = amqp_connection.channel()
 
     def on_created(self, event):
         if event.is_directory:
             return None
 
-        queue = "Parsing"
+        queue = q.PARSING_QUEUE
         filepath = Path(event.src_path)
 
         if filepath.suffix != ".txt":
-            queue = "Errors"
+            queue = q.ERROR_QUEUE
 
         message = dict(
             src_path=str(filepath),
@@ -62,5 +62,5 @@ class Handler(FileSystemEventHandler):
 
 
 if __name__ == '__main__':
-    w = Watcher("./watching")
+    w = Watcher("./watching", {"host": "localhost"})
     w.run()
