@@ -10,7 +10,6 @@ from watchdog.events import FileSystemEventHandler
 from pathlib import Path
 from rabbitmq import queues as q, Worker
 import time
-import json
 
 
 class Watcher(Worker):
@@ -23,7 +22,8 @@ class Watcher(Worker):
 
     def run(self):
         super(Watcher, self).run()
-        event_handler = Handler(self.connection)
+        event_handler = Handler(self.publish)
+
         self.observer.schedule(
             event_handler, self.watching_dir, recursive=True)
         self.observer.start()
@@ -38,29 +38,22 @@ class Watcher(Worker):
 
 
 class Handler(FileSystemEventHandler):
-    def __init__(self, amqp_connection):
-        self.channel = amqp_connection.channel()
+    def __init__(self, on_send_callback):
+        self.on_send_callback = on_send_callback
 
     def on_created(self, event):
         if event.is_directory:
             return None
 
-        queue = q.PARSING_QUEUE
         filepath = Path(event.src_path)
-
-        if filepath.suffix != ".txt":
-            queue = q.ERROR_QUEUE
-
-        message = dict(
+        queue = q.PARSING_QUEUE if filepath.suffix == ".txt" else q.ERROR_QUEUE
+        data = dict(
             src_path=str(filepath),
             time=time.time())
 
-        self.channel.queue_declare(queue=queue)
-        self.channel.basic_publish(exchange='',
-                                   routing_key="sender",
-                                   body=json.dumps(message))
+        self.on_send_callback(queue, data)
 
 
 if __name__ == '__main__':
-    w = Watcher("./watching", {"host": "localhost"})
+    w = Watcher("./watching", {"host": "localhost", "exchange": "test"})
     w.run()
