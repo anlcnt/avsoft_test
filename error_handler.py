@@ -63,10 +63,9 @@ def bulk_send_to_telegram(token: str,
 
 
 if __name__ == '__main__':
-    token = "5768704227:AAFT-qw6gEc6RCWHyhyUwn4a18NPmC-Ry_g"
     w = ErrorHandler({
         "host": "localhost",
         "exchange": "test",
-        "token": token,
-        "chat_id": 471004309})
+        "token": "",
+        "chat_id": 0})
     w.run()
