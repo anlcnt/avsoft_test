@@ -6,23 +6,19 @@
 количество вхождений на соответствующее число.
 '''
 
-from rabbitmq import queues as q, Worker
+from rabbitmq import queues as q, Subscriber
 import re
 import json
 import logging
 
 
 # Регулярное выражение для парсинга
-# TODO: Нормальный парсинг
-PARSING_REGULAR = r"a-zA-Z0-9А-Яа-я()"
+REG_CHAR = r"[^a-zA-Zа-яА-ЯёЁ]"
 
 
-class Parser(Worker):
-    def __init__(self,
-                 amqp_con_parameters: dict,
-                 queue=q.PARSING_QUEUE):
-        super(Parser, self).__init__(amqp_con_parameters)
-        self._queue = queue
+class Parser(Subscriber):
+    def __init__(self, config: dict, queue=q.PARSING_QUEUE):
+        super(Parser, self).__init__(config, queue)
 
     def on_message_callback(self, channel, method, properties, body):
         binding_key = method.routing_key
@@ -42,16 +38,12 @@ class Parser(Worker):
             data = dict()
             for line in file:
                 line = line.lower()
-                words = re.sub(PARSING_REGULAR, "", line).split()
+                words = [word for word in re.split(REG_CHAR, line) if word]
                 for word in words:
                     if word not in data:
                         data[word] = 0
                     data[word] += 1
-            print(data)
-
-    def run(self):
-        super(Parser, self).run()
-        self.subscribe(routing_key=self._queue, queue=self._queue)
+        print(data)
 
 
 if __name__ == "__main__":

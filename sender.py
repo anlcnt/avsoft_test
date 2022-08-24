@@ -8,11 +8,11 @@
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from pathlib import Path
-from rabbitmq import queues as q, Worker
+from rabbitmq import queues as q, Publisher
 import time
 
 
-class Watcher(Worker):
+class Watcher(Publisher):
     def __init__(self,
                  watching_dir: str,
                  amqp_con_parameters: dict):

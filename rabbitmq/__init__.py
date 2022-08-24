@@ -1,3 +1,4 @@
+from rabbitmq import queues as q
 from abc import ABC
 import pika
 import json
@@ -16,13 +17,35 @@ class Worker(ABC):
     def exchange(self):
         return self.config["exchange"] or ""
 
-    def on_message_callback(self, channel, method, properties, body):
-        binding_key = method.routing_key
-        logging.info(f"received new message for - {binding_key} {body}")
+    @staticmethod
+    def _create_connection(host="localhost", port=5672, *args, **kwargs):
+        # TODO: Передача полного списка параметров RabbitMQ
+        params = pika.ConnectionParameters(host=host,
+                                           port=port)
+        return pika.BlockingConnection(params)
+
+    @staticmethod
+    def _create_channel(connection, exchange="", *args, **kwargs):
+        # TODO: Отлов ошибки при создании канала
+        channel = connection.channel()
+        channel.exchange_declare(exchange=exchange,
+                                 exchange_type="topic")
+        return channel
+
+    def run(self):
+        logging.info(f"{type(self).__name__} was started")
+
+
+# Издатель
+class Publisher(Worker):
+    def __init__(self, config: dict):
+        super(Publisher, self).__init__(config)
+        self.config = config
 
     # Публикация JSON в очередь
     def publish(self, routing_key: str, data: dict):
         connection = Worker._create_connection(**self.config)
+        # TODO: Отлов ошибки при создании json'а
         message = json.dumps(data)
         channel = Worker._create_channel(connection, self.exchange)
         channel.basic_publish(exchange=self.exchange,
@@ -30,6 +53,17 @@ class Worker(ABC):
                               body=message)
         logging.info(f"{type(self).__name__} sends {message} to {routing_key}")
         connection.close()
+
+
+# Подписчик
+class Subscriber(Worker):
+    def __init__(self, config: dict, queue=q.PARSING_QUEUE):
+        super(Subscriber, self).__init__(config)
+        self.queue = queue
+
+    def on_message_callback(self, channel, method, properties, body):
+        binding_key = method.routing_key
+        logging.info(f"received new message for - {binding_key} {body}")
 
     # Подписка на очередь
     def subscribe(self, routing_key: str, queue: str):
@@ -53,20 +87,6 @@ class Worker(ABC):
             connection.close()
             logging.info("Connection closed")
 
-    @staticmethod
-    def _create_connection(host="localhost", port=5672, *args, **kwargs):
-        # TODO: Передача полного списка параметров RabbitMQ
-        params = pika.ConnectionParameters(host=host,
-                                           port=port)
-        return pika.BlockingConnection(params)
-
-    @staticmethod
-    def _create_channel(connection, exchange="", *args, **kwargs):
-        # Отлов ошибки при создании канала
-        channel = connection.channel()
-        channel.exchange_declare(exchange=exchange,
-                                 exchange_type="topic")
-        return channel
-
     def run(self):
-        logging.info(f"{type(self).__name__} was started")
+        super(Subscriber, self).run()
+        self.subscribe(routing_key=self.queue, queue=self.queue)
