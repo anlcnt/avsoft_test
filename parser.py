@@ -6,7 +6,9 @@
 количество вхождений на соответствующее число.
 '''
 
-from rabbitmq import queues as q, Subscriber
+from rabbitmq import Subscriber
+from settings import RabbitMQSettings, Queues
+from database import MySQLClientMixin
 import re
 import json
 import logging
@@ -16,9 +18,11 @@ import logging
 REG_CHAR = r"[^a-zA-Zа-яА-ЯёЁ]"
 
 
-class Parser(Subscriber):
-    def __init__(self, config: dict, queue=q.PARSING_QUEUE):
-        super(Parser, self).__init__(config, queue)
+class Parser(Subscriber, MySQLClientMixin):
+    def __init__(self,
+                 rabbitmq_config=RabbitMQSettings,
+                 queue=Queues.PARSING_QUEUE):
+        super(Parser, self).__init__(rabbitmq_config, queue)
 
     def on_message_callback(self, channel, method, properties, body):
         binding_key = method.routing_key
@@ -33,6 +37,12 @@ class Parser(Subscriber):
         except Exception as e:
             logging.error(e)
 
+    # Заносим данные в базу
+    def push_data(self, data):
+        with open("database/queries/insert_or_update.sql") as f:
+            query = f.read() % ",".join([str(v) for v in data.items()])
+            self.send_query(query)
+
     def parse(self, src_path: str):
         with open(src_path) as file:
             data = dict()
@@ -43,9 +53,9 @@ class Parser(Subscriber):
                     if word not in data:
                         data[word] = 0
                     data[word] += 1
-        print(data)
+        self.push_data(data)
 
 
 if __name__ == "__main__":
-    p = Parser({"host": "localhost", "port": 5672, "exchange": "test"})
+    p = Parser()
     p.run()
