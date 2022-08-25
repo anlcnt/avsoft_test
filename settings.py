@@ -1,0 +1,34 @@
+from dotenv import load_dotenv
+from pathlib import Path
+import os
+
+load_dotenv()
+env_path = Path('.') / '.env'
+load_dotenv(dotenv_path=env_path)
+
+
+PATH_DIR = os.getenv("PATH_DIR") or "./"
+
+
+class RabbitMQSettings:
+    HOST = os.getenv("RABBITMQ_HOST") or "localhost"
+    PORT = int(os.getenv("RABBITMQ_PORT")) or 5672
+    EXCHANGE = os.getenv("RABBITMQ_EXCHANGE") or "avsoft"
+
+
+# Используемые в проекте очереди (Queues) в RabbitMQ
+class Queues:
+    PARSING_QUEUE = os.getenv("RABBITMQ_PARSING_QUEUE") or "Parsing"
+    ERROR_QUEUE = os.getenv("RABBITMQ_ERROR_QUEUE") or "Errors"
+
+
+class MySQLSettings:
+    HOST = os.getenv("MYSQL_HOST") or "localhost"
+    USER = os.getenv("MYSQL_USER") or ""
+    PASSWORD = os.getenv("MYSQL_PASSWORD") or ""
+    DATABASE = os.getenv("MYSQL_DATABASE") or ""
+
+
+class TelegramSettings:
+    TOKEN = os.getenv("TELEGRAM_TOKEN") or ""
+    CHAT_ID = os.getenv("TELEGRAM_CHAT_ID") or 0
