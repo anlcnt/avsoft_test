@@ -31,4 +31,4 @@ class MySQLSettings:
 
 class TelegramSettings:
     TOKEN = os.getenv("TELEGRAM_TOKEN") or ""
-    CHAT_ID = os.getenv("TELEGRAM_CHAT_ID") or 0
+    CHAT_IDS = [id for id in os.getenv("TELEGRAM_CHAT_IDS").split()]
