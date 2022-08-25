@@ -12,6 +12,7 @@ def exception_handler(func):
     return wrapper
 
 
+# Не стал использовать ORM по причине простоты базы
 class MySQLClientMixin:
     # TODO: Создание базы данных при её отсутствии
     def connect(self):
@@ -24,7 +25,6 @@ class MySQLClientMixin:
 
     @exception_handler
     def select(self, query):
-        print(query)
         with self.connect() as connection:
             with connection.cursor() as cur:
                 cur.execute(query)
