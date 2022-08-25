@@ -22,10 +22,17 @@ class MySQLClientMixin:
             database=MySQLSettings.DATABASE,
         )
 
-    def send_query(self, query):
-        try:
-            with self.connect() as connection:
-                with connection.cursor() as cur:
-                    cur.execute(query)
-        except Error as e:
-            logging.error(e)
+    @exception_handler
+    def select(self, query):
+        print(query)
+        with self.connect() as connection:
+            with connection.cursor() as cur:
+                cur.execute(query)
+                return cur.fetchall()
+
+    @exception_handler
+    def insert(self, query):
+        with self.connect() as connection:
+            with connection.cursor() as cur:
+                cur.execute(query)
+                connection.commit()

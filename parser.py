@@ -34,6 +34,7 @@ class Parser(Subscriber, MySQLClientMixin):
             self.parse(path)
         except json.decoder.JSONDecodeError:
             logging.error(f"{body} has not a JSON")
+        # TODO: Разобраться с этим недоразумением
         except Exception as e:
             logging.error(e)
 
@@ -41,7 +42,7 @@ class Parser(Subscriber, MySQLClientMixin):
     def push_data(self, data):
         with open("database/queries/insert_or_update.sql") as f:
             query = f.read() % ",".join([str(v) for v in data.items()])
-            self.send_query(query)
+            self.insert(query)
 
     def parse(self, src_path: str):
         with open(src_path) as file:
