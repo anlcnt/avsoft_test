@@ -7,6 +7,7 @@
 from rabbitmq import Subscriber
 from datetime import datetime
 from settings import RabbitMQSettings, TelegramSettings, Queues
+from threading import Timer
 import requests
 import json
 
@@ -17,51 +18,64 @@ class ErrorHandler(Subscriber):
                  tg_config=TelegramSettings,
                  queue=Queues.ERROR_QUEUE):
         super(ErrorHandler, self).__init__(rabbitmq_config, queue)
-        self.tg_config = TelegramSettings
+        if tg_config.TOKEN:
+            self.tg = TelegramSender(token=tg_config.TOKEN,
+                                     chats=tg_config.CHAT_IDS)
 
-    # TODO: Планировщик
+    # TODO: Большое количество сообщений может завалить количеством потоков
     # TODO: Добавить отправку по почте, SIEM, SOAR
     def send(self, data: dict):
-        if tg_health_check(self.tg_config.TOKEN):
+        print("trying send")
+        if self.tg.alive:
             dt_msg = datetime.utcfromtimestamp(
                 data['time']).strftime('%Y-%m-%d %H:%M:%S')
             src_path = data['src_path']
             msg = (f"{dt_msg}: Error on {src_path}")
-            send_to_telegram(self.tg_config.TOKEN, self.config["chat_id"], msg)
+            self.tg.send_to_users(msg)
+        else:
+            t = Timer(3, self.send, kwargs={"data": data})
+            t.start()
 
     def on_message_callback(self, channel, method, properties, body):
         self.send(json.loads(body))
 
 
-# Отправка сообщения по Telegram
-def send_to_telegram(token: str,
-                     chat_id: int,
-                     message: str,
-                     parse_mode="Markdown"):
-    url = f'https://api.telegram.org/bot{token}/sendMessage'
-    response = requests.get(url, params={
-        "chat_id": chat_id,
-        "parse_mode": parse_mode,
-        "text": message
-    })
-    return response.json()
+class TelegramSender:
+    def __init__(self,
+                 token=TelegramSettings.TOKEN,
+                 chats=TelegramSettings.CHAT_IDS):
+        self._token = token
+        self._chats = chats
 
+    @property
+    def token(self):
+        return self._token
 
-def tg_health_check(token: str):
-    url = f'https://api.telegram.org/bot{token}/getMe'
-    response = requests.get(url)
-    if response.status_code == 200:
-        return response.json()['ok']
-    return False
+    @property
+    def chats(self):
+        return self._chats
 
+    def get(self, method, params={}):
+        url = f"https://api.telegram.org/bot{self._token}/{method}"
+        return requests.get(url, params=params)
 
-# Массовая рассылка по Telegram
-def bulk_send_to_telegram(token: str,
-                          chats_id: list,
-                          message: str,
-                          parse_mode="Markdown"):
-    for id in chats_id:
-        send_to_telegram(token, id, message, parse_mode)
+    def alive(self):
+        response = self.get("getMe")
+        if response.status_code == 200:
+            return response.json()['ok']
+        return False
+
+    def _send(self, chat_id, message, parse_mode="Markdown"):
+        response = self.get("sendMessage", params={
+            "chat_id": chat_id,
+            "parse_mode": parse_mode,
+            "text": message
+        })
+        return response.json()
+
+    def send_to_users(self, message, parse_mode="Markdown"):
+        for chat_id in self.chats:
+            self._send(chat_id, message, parse_mode)
 
 
 if __name__ == '__main__':
