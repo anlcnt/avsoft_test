@@ -4,28 +4,30 @@
 оповещение должно произойти ПОЗДНЕЕ.
 '''
 
-from rabbitmq import queues as q, Subscriber
+from rabbitmq import Subscriber
 from datetime import datetime
+from settings import RabbitMQSettings, TelegramSettings, Queues
 import requests
 import json
 
 
 class ErrorHandler(Subscriber):
-    def __init__(self, config: dict, queue=q.ERROR_QUEUE):
-        super(ErrorHandler, self).__init__(config, queue)
+    def __init__(self,
+                 rabbitmq_config=RabbitMQSettings,
+                 tg_config=TelegramSettings,
+                 queue=Queues.ERROR_QUEUE):
+        super(ErrorHandler, self).__init__(rabbitmq_config, queue)
+        self.tg_config = TelegramSettings
 
-    @property
-    def tg_token(self):
-        if "token" in self.config:
-            return self.config['token']
-
+    # TODO: Планировщик
+    # TODO: Добавить отправку по почте, SIEM, SOAR
     def send(self, data: dict):
-        if tg_health_check(self.tg_token):
+        if tg_health_check(self.tg_config.TOKEN):
             dt_msg = datetime.utcfromtimestamp(
                 data['time']).strftime('%Y-%m-%d %H:%M:%S')
             src_path = data['src_path']
             msg = (f"{dt_msg}: Error on {src_path}")
-            send_to_telegram(self.tg_token, self.config["chat_id"], msg)
+            send_to_telegram(self.tg_config.TOKEN, self.config["chat_id"], msg)
 
     def on_message_callback(self, channel, method, properties, body):
         self.send(json.loads(body))
@@ -63,10 +65,5 @@ def bulk_send_to_telegram(token: str,
 
 
 if __name__ == '__main__':
-    token = "5768704227:AAFT-qw6gEc6RCWHyhyUwn4a18NPmC-Ry_g"
-    w = ErrorHandler({
-        "host": "localhost",
-        "exchange": "test",
-        "token": token,
-        "chat_id": 471004309})
+    w = ErrorHandler()
     w.run()

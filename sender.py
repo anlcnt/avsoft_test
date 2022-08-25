@@ -7,18 +7,19 @@
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+from settings import RabbitMQSettings, PATH_DIR, Queues as q
+from rabbitmq import Publisher
 from pathlib import Path
-from rabbitmq import queues as q, Publisher
 import time
 
 
 class Watcher(Publisher):
     def __init__(self,
                  watching_dir: str,
-                 amqp_con_parameters: dict):
-        super(Watcher, self).__init__(amqp_con_parameters)
-        self.observer = Observer()
+                 rabbitmq_config=RabbitMQSettings):
+        super(Watcher, self).__init__(rabbitmq_config)
         self.watching_dir = watching_dir
+        self.observer = Observer()
 
     def run(self):
         super(Watcher, self).run()
@@ -55,5 +56,5 @@ class Handler(FileSystemEventHandler):
 
 
 if __name__ == '__main__':
-    w = Watcher("./watching", {"host": "localhost", "exchange": "test"})
+    w = Watcher(PATH_DIR)
     w.run()
