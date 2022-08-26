@@ -15,5 +15,6 @@
 
 ## In progress
 - [ ] rabbitmq/__init__.py:9                   Пусть классы сами забирают конфигурации из модуля settings.py
+- [ ] Dockerfile                               Завернуть модули в Docker
 
 ## Done
