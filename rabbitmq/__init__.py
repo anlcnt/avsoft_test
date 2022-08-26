@@ -6,6 +6,7 @@ import logging
 
 
 # Класс для взаимодействия с RabbitMQ
+# TODO: Пусть классы сами забирают конфигурации из модуля settings.py
 class Worker(ABC):
     def __init__(self, config=RabbitMQSettings):
         self._config = config
