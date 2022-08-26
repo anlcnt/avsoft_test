@@ -7,7 +7,7 @@ env_path = Path('.') / '.env'
 load_dotenv(dotenv_path=env_path)
 
 
-PATH_DIR = os.getenv("PATH_DIR") or "./"
+PATH_DIR = Path(os.getenv("PATH_DIR") or "./")
 
 
 class RabbitMQSettings:
