@@ -14,10 +14,11 @@ def word_in_files(filesdir: Path, word: str, suffix=".txt"):
     fpaths = (fp for fp in filesdir.iterdir() if fp.suffix == suffix)
     for fpath in fpaths:
         with open(fpath) as file:
-            for line in file:
-                # TODO: Поиск слов регулярным выражением
-                if word in line:
-                    yield fpath
+            # TODO: Здесь можно использовать какой-нибудь алгоритм поиска
+            txt = file.read()
+            # TODO: Поиск слов регулярным выражением
+            if word in txt.lower():
+                yield fpath.name
 
 
 class Reader(MySQLClientMixin):
@@ -42,7 +43,8 @@ class Reader(MySQLClientMixin):
         with open(output, 'a') as f:
             for record in records:
                 word, = record
-                f.write(f"{word}: {', '.join(word_in_files(self.dir, word))};")
+                rec = f"{word}: {', '.join(word_in_files(self.dir, word))};\n"
+                f.write(rec)
 
     # TODO: Watchdod?
     def run(self):
@@ -56,5 +58,5 @@ class Reader(MySQLClientMixin):
 
 
 if __name__ == "__main__":
-    w = Reader(PATH_DIR, 10)
+    w = Reader(PATH_DIR, 2)
     w.run()
