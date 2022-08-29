@@ -19,5 +19,6 @@
 - [ ] generator.py:25 фильтровать регулярным выражением .css, .js, mailto и tel
 - [ ] generator.py:31 Поиск в глубину
 - [ ] generator.py:66 Запись в файл
+- [ ] avsoft_test/compose.yml:29 volume
 
 ## Done
