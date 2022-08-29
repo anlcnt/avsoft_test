@@ -15,10 +15,10 @@ import time
 
 class Watcher(Publisher):
     def __init__(self,
-                 watching_dir: str,
+                 volume: str,
                  rabbitmq_config=RabbitMQSettings):
         super(Watcher, self).__init__(rabbitmq_config)
-        self.watching_dir = watching_dir
+        self.volume = volume
         self.observer = Observer()
 
     def run(self):
@@ -26,7 +26,7 @@ class Watcher(Publisher):
         event_handler = Handler(self.publish)
 
         self.observer.schedule(
-            event_handler, self.watching_dir, recursive=True)
+            event_handler, self.volume, recursive=True)
         self.observer.start()
         try:
             while True:

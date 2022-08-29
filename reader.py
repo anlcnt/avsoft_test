@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 # Генератор, определяющий наличие слова в файле
-def word_in_files(filesdir: Path, word: str, suffix=".txt"):
+def get_words(filesdir: Path, word: str, suffix=".txt"):
     fpaths = (fp for fp in filesdir.iterdir() if fp.suffix == suffix)
     for fpath in fpaths:
         with open(fpath) as file:
@@ -22,9 +22,9 @@ def word_in_files(filesdir: Path, word: str, suffix=".txt"):
 
 
 class Reader(MySQLClientMixin):
-    def __init__(self, watch_dir: Path, count=1, hold_time=10):
+    def __init__(self, volume: Path, count=1, hold_time=10):
         self.count = count
-        self.dir = watch_dir
+        self.volume = volume
         self.hold_time = hold_time
 
     # TODO: Определение, куда записывать файл
@@ -43,7 +43,7 @@ class Reader(MySQLClientMixin):
         with open(output, 'a') as f:
             for record in records:
                 word, = record
-                rec = f"{word}: {', '.join(word_in_files(self.dir, word))};\n"
+                rec = f"{word}:{', '.join(get_words(self.volume, word))};\n"
                 f.write(rec)
 
     # TODO: Watchdod?
