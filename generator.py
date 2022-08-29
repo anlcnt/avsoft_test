@@ -55,8 +55,7 @@ class Generator:
         self.urls = self.find_links(base_page)
         n_urls = set()
         while self.urls != n_urls:
-            # n_urls = set(self.urls)
-            n_urls = find_links()
+            n_urls = set(self.urls)
             for url in n_urls:
                 try:
                     page = read_page(url)
@@ -64,6 +63,7 @@ class Generator:
                 except Exception:
                     print('ERROR', url)
                     continue
+                # TODO: Запись в файл
                 self.urls.update(self.find_links(page))
 
 
