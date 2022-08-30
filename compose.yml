@@ -34,7 +34,7 @@ services:
             - MYSQL_USER=av_user
             - MYSQL_PASSWORD=password
             - MYSQL_DATABASE=wordsbase
-        image: 'python'
+        image: 'python3'
         working_dir: /app
 
     parser:
@@ -48,7 +48,7 @@ services:
             - MYSQL_USER=av_user
             - MYSQL_PASSWORD=password
             - MYSQL_DATABASE=wordsbase
-        image: 'python'
+        image: 'python3'
         working_dir: /app
 
     reader:
@@ -59,7 +59,7 @@ services:
             - MYSQL_USER=av_user
             - MYSQL_PASSWORD=password
             - MYSQL_DATABASE=wordsbase
-        image: 'python'
+        image: 'python3'
         working_dir: /app
     
     error_handler:
@@ -72,12 +72,12 @@ services:
             - RABBITMQ_EXCHANGE=avsoft
             - TELEGRAM_TOKEN=token
             - TELEGRAM_CHAT_IDS=1,2,3
-        image: 'python'
+        image: 'python3'
         working_dir: /app
     
     generator:
         container_name: generator
         entrypoint:
             - /app/generator.py
-        image: 'python'
+        image: 'python3'
         working_dir: /app
