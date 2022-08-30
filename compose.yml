@@ -7,9 +7,9 @@ services:
             - '.:/app'
         environment:
             - MYSQL_ROOT_PASSWORD=root_pass
-            - MYSQL_DATABASE=app_db
-            - MYSQL_USER=app_db_user
-            - MYSQL_PASSWORD=app_db_pass
+            - MYSQL_DATABASE=wordsbase
+            - MYSQL_USER=av_user
+            - MYSQL_PASSWORD=password
         ports:
             - '29002:3306'
 
@@ -18,19 +18,22 @@ services:
         working_dir: /app
         volumes:
             - '.:/app'
-        environment:
-            - MYSQL_ROOT_PASSWORD=root_pass
-            - MYSQL_DATABASE=app_db
-            - MYSQL_USER=app_db_user
-            - MYSQL_PASSWORD=app_db_pass
         ports:
-            - '29002:3306'
+            - "15672:15672"
+            - "5672:5672"
 
     # TODO: volume
     sender:
         container_name: sender
         entrypoint:
             - /app/sender.py
+        environment:
+            - RABBITMQ_HOST=localhost
+            - RABBITMQ_PORT=5672
+            - RABBITMQ_EXCHANGE=avsoft
+            - MYSQL_USER=av_user
+            - MYSQL_PASSWORD=password
+            - MYSQL_DATABASE=wordsbase
         image: 'python'
         working_dir: /app
 
@@ -38,6 +41,13 @@ services:
         container_name: parser
         entrypoint:
             - /app/parser.py
+        environment:
+            - RABBITMQ_HOST=localhost
+            - RABBITMQ_PORT=5672
+            - RABBITMQ_EXCHANGE=avsoft
+            - MYSQL_USER=av_user
+            - MYSQL_PASSWORD=password
+            - MYSQL_DATABASE=wordsbase
         image: 'python'
         working_dir: /app
 
@@ -45,6 +55,10 @@ services:
         container_name: reader
         entrypoint:
             - /app/reader.py
+        environment:
+            - MYSQL_USER=av_user
+            - MYSQL_PASSWORD=password
+            - MYSQL_DATABASE=wordsbase
         image: 'python'
         working_dir: /app
     
@@ -52,6 +66,12 @@ services:
         container_name: error_handler
         entrypoint:
             - /app/error_handler.py
+        environment:
+            - RABBITMQ_HOST=localhost
+            - RABBITMQ_PORT=5672
+            - RABBITMQ_EXCHANGE=avsoft
+            - TELEGRAM_TOKEN=token
+            - TELEGRAM_CHAT_IDS=1,2,3
         image: 'python'
         working_dir: /app
     
