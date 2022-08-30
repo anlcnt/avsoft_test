@@ -4,14 +4,16 @@
 Адрес сайта вводит пользователь.
 '''
 from settings import PATH_DIR
-from urllib import parse, request, error
+from urllib import request, error
+from urllib.parse import urljoin
+from pathlib import Path
 import re
 import sys
 
 
 # Проверка на валидность (временная затычка)
 def is_html(url):
-    not_valid = ('mailto:', '.css', '.js', 'tel:', 'http')
+    not_valid = ('mailto:', '.css', '.js', 'tel:', 'http', 'geo')
     for v in not_valid:
         if v in url:
             return False
@@ -19,23 +21,33 @@ def is_html(url):
 
 
 def read_page(url):
-    return request.urlopen(url).read().decode()
+    try:
+        res = request.urlopen(url)
+        return res.read().decode()
+    except error.HTTPError:
+        return ""
 
 
 # TODO: фильтровать регулярным выражением .css, .js, mailto и tel
 def find_links(page: str):
     href_reg = r'href=[\'"]?([^\'" >]+)'
-    return set(filter(is_html, re.findall(href_reg, page)))
+    return filter(is_html, re.findall(href_reg, page))
 
 
-# TODO: Поиск в глубину
-def dfs(urls, visited=None):
+def dfs(base_url, url=None, visited=None):
     if visited is None:
         visited = set()
+    if url is None:
+        url = base_url
 
-    for url in urls - visited:
-        dfs(urls, visited)
+    def join(u1, u2):
+        return urljoin(base_url, u2) if u2[0] == '/' else urljoin(u1, u2)
 
+    page = read_page(url)
+    urls = set(join(url, u) for u in find_links(page))
+    for current_url in urls - visited:
+        visited.add(current_url)
+        dfs(base_url, current_url, visited)
     return visited
 
 
@@ -46,7 +58,7 @@ class Generator:
         self.urls = set()
 
     def find_links(self, page):
-        return set(parse.urljoin(self.base_url, a) for a in find_links(page))
+        return set(urljoin(self.base_url, a) for a in find_links(page))
 
     def run(self):
         if not self.base_url:
@@ -67,9 +79,15 @@ class Generator:
                 self.urls.update(self.find_links(page))
 
 
+# if __name__ == "__main__":
+#     base_url = None
+#     if len(sys.argv) > 1:
+#         base_url = sys.argv[1]
+#     w = Generator(base_url=base_url)
+#     w.run()
+
 if __name__ == "__main__":
     base_url = None
     if len(sys.argv) > 1:
         base_url = sys.argv[1]
-    w = Generator(base_url=base_url)
-    w.run()
+    print(dfs(base_url))
