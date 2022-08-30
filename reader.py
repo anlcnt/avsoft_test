@@ -51,7 +51,7 @@ class Reader(MySQLClientMixin):
 
     # TODO: Watchdod?
     def run(self):
-        print(f'[*] Reader has started. To exit press CTRL + C')
+        print(f'Reader has started. To exit press CTRL + C')
         try:
             while True:
                 self.remove_writes()
