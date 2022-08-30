@@ -3,16 +3,17 @@
 записывает содержимое каждой страницы в отдельный файл, в папку Отправителя.
 Адрес сайта вводит пользователь.
 '''
-from settings import PATH_DIR
+from settings import FileSettings
 from urllib import request, error
 from urllib.parse import urljoin
-from pathlib import Path
+import logging
 import re
 import sys
+import uuid
 
 
 # Проверка на валидность (временная затычка)
-def is_html(url):
+def is_html(url: str):
     not_valid = ('mailto:', '.css', '.js', 'tel:', 'http', 'geo')
     for v in not_valid:
         if v in url:
@@ -20,42 +21,49 @@ def is_html(url):
     return True
 
 
-def read_page(url):
+def read_page(url: str):
     try:
         res = request.urlopen(url)
         return res.read().decode()
-    except error.HTTPError:
-        return ""
+    except error.HTTPError as http_error:
+        logging.error(http_error)
+        return str()
 
 
 # TODO: фильтровать регулярным выражением .css, .js, mailto и tel
-def find_links(page: str):
+def find_links(page):
     href_reg = r'href=[\'"]?([^\'" >]+)'
     return filter(is_html, re.findall(href_reg, page))
 
 
-def dfs(base_url, url=None, visited=None):
+# Поиск страниц в глубину
+def dfs(current_url, visited=None, volume=None, suffix=""):
     if visited is None:
         visited = set()
-    if url is None:
-        url = base_url
 
-    def join(u1, u2):
-        return urljoin(base_url, u2) if u2[0] == '/' else urljoin(u1, u2)
+    page = read_page(current_url)
 
-    page = read_page(url)
-    urls = set(join(url, u) for u in find_links(page))
-    for current_url in urls - visited:
-        visited.add(current_url)
-        dfs(base_url, current_url, visited)
+    # Запись в файл
+    if volume:
+        filename = str(uuid.uuid4()) + suffix
+        with open(volume.joinpath(filename), 'w') as file:
+            file.write(page)
+
+    urls = set(urljoin(current_url, u) for u in find_links(page))
+    for url in urls - visited:
+        visited.add(url)
+        dfs(url, visited, volume, suffix)
     return visited
 
 
 class Generator:
-    def __init__(self, volume=PATH_DIR, base_url=None):
+    def __init__(self,
+                 base_url=None,
+                 volume=FileSettings.PATH_DIR,
+                 suffix=FileSettings.FILE_SUFFIX):
         self.volume = volume
+        self.suffix = suffix
         self.base_url = base_url
-        self.urls = set()
 
     def find_links(self, page):
         return set(urljoin(self.base_url, a) for a in find_links(page))
@@ -63,31 +71,14 @@ class Generator:
     def run(self):
         if not self.base_url:
             self.base_url = input("URL: ")
-        base_page = read_page(self.base_url)
-        self.urls = self.find_links(base_page)
-        n_urls = set()
-        while self.urls != n_urls:
-            n_urls = set(self.urls)
-            for url in n_urls:
-                try:
-                    page = read_page(url)
-                    print(url)
-                except Exception:
-                    print('ERROR', url)
-                    continue
-                # TODO: Запись в файл
-                self.urls.update(self.find_links(page))
+        logging.info(f'Searching in {self.base_url}')
+        dfs(self.base_url, volume=self.volume, suffix=self.suffix)
 
-
-# if __name__ == "__main__":
-#     base_url = None
-#     if len(sys.argv) > 1:
-#         base_url = sys.argv[1]
-#     w = Generator(base_url=base_url)
-#     w.run()
 
 if __name__ == "__main__":
     base_url = None
     if len(sys.argv) > 1:
         base_url = sys.argv[1]
-    print(dfs(base_url))
+
+    w = Generator(base_url)
+    w.run()
