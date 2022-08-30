@@ -83,7 +83,8 @@ class Subscriber(Worker):
                               auto_ack=True)
 
         # TODO: Что-то сделать с этим
-        print(f'[*] Waiting for data for {queue}. To exit press CTRL + C')
+        print(f'{type(self).__name__}',
+              f'waiting for data for {queue}. To exit press CTRL + C')
         try:
             channel.start_consuming()
         except KeyboardInterrupt:
