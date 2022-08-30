@@ -7,7 +7,12 @@ env_path = Path('.') / '.env'
 load_dotenv(dotenv_path=env_path)
 
 
-PATH_DIR = Path(os.getenv("PATH_DIR") or "./")
+class FileSettings:
+    # Хранилище файлов
+    PATH_DIR = Path(os.getenv("PATH_DIR") or "./")
+
+    # Допустимое расширение файлов
+    FILE_SUFFIX = os.getenv("FILE_SUFFIX") or ".txt"
 
 
 class RabbitMQSettings:

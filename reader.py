@@ -3,7 +3,7 @@
 удаляет запись и создает файл, содержащий 2 строки: само слово и имена файлов,
 содержащих данное слово. N - константа с произвольным значением.
 '''
-from settings import PATH_DIR
+from settings import FileSettings
 from database import MySQLClientMixin
 from time import sleep
 from pathlib import Path
@@ -22,7 +22,10 @@ def get_words(filesdir: Path, word: str, suffix=".txt"):
 
 
 class Reader(MySQLClientMixin):
-    def __init__(self, volume: Path, count=1, hold_time=10):
+    def __init__(self,
+                 volume=FileSettings.PATH_DIR,
+                 count=1,
+                 hold_time=10):
         self.count = count
         self.volume = volume
         self.hold_time = hold_time
@@ -58,5 +61,5 @@ class Reader(MySQLClientMixin):
 
 
 if __name__ == "__main__":
-    w = Reader(PATH_DIR, 2)
+    w = Reader(FileSettings.PATH_DIR, 2)
     w.run()
