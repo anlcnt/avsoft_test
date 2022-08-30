@@ -4,7 +4,8 @@ import os
 
 load_dotenv()
 env_path = Path('.') / '.env'
-load_dotenv(dotenv_path=env_path)
+if Path.exists(env_path):
+    load_dotenv(dotenv_path=env_path)
 
 
 class FileSettings:
