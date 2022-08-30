@@ -1,4 +1,4 @@
-version: '3.1'
+version: '3'
 services:
     mysql:
         image: 'mysql'
@@ -11,7 +11,7 @@ services:
             - MYSQL_USER=av_user
             - MYSQL_PASSWORD=password
         ports:
-            - '29002:3306'
+            - '3306:3306'
 
     rabbitmq:
         image: 'rabbitmq'
@@ -25,8 +25,7 @@ services:
     # TODO: volume
     sender:
         container_name: sender
-        entrypoint:
-            - /app/sender.py
+        command: python3 /app/sender.py
         environment:
             - RABBITMQ_HOST=localhost
             - RABBITMQ_PORT=5672
@@ -36,11 +35,17 @@ services:
             - MYSQL_DATABASE=wordsbase
         image: 'python3'
         working_dir: /app
+        volumes:
+            - '/app/watching:/watching'
+        depends_on:
+            - mysql
+            - rabbitmq
+            - error_handler
+            - parser
 
     parser:
         container_name: parser
-        entrypoint:
-            - /app/parser.py
+        command: python3 /app/parser.py
         environment:
             - RABBITMQ_HOST=localhost
             - RABBITMQ_PORT=5672
@@ -50,22 +55,29 @@ services:
             - MYSQL_DATABASE=wordsbase
         image: 'python3'
         working_dir: /app
+        volumes:
+            - '/app/watching:/watching'
+        depends_on:
+            - mysql
+            - rabbitmq
 
     reader:
         container_name: reader
-        entrypoint:
-            - /app/reader.py
+        command: python3 /app/reader.py
         environment:
             - MYSQL_USER=av_user
             - MYSQL_PASSWORD=password
             - MYSQL_DATABASE=wordsbase
         image: 'python3'
         working_dir: /app
+        depends_on:
+            - mysql
+            - parser
     
+    # TODO: volume for output
     error_handler:
         container_name: error_handler
-        entrypoint:
-            - /app/error_handler.py
+        command: python3 /app/error_handler.py
         environment:
             - RABBITMQ_HOST=localhost
             - RABBITMQ_PORT=5672
@@ -74,10 +86,15 @@ services:
             - TELEGRAM_CHAT_IDS=1,2,3
         image: 'python3'
         working_dir: /app
+        depends_on:
+            - rabbitmq
     
     generator:
         container_name: generator
-        entrypoint:
-            - /app/generator.py
+        command: python3 /app/generator.py
         image: 'python3'
         working_dir: /app
+        volumes:
+            - '/app/watching:/watching'
+        depends_on:
+            - parser
